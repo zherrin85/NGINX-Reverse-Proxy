@@ -1,0 +1,124 @@
+    server {
+        server_name zachub.duckdns.org;
+
+        listen 80;
+        listen [::]:80;
+        return 301 https://$host$request_uri;
+    }
+
+    server {
+        server_name zachub.duckdns.org;
+	
+	root /var/www/html/zachub.duckdns.org;
+	index index.php index.html index.htm default.html;
+
+#	error_log /var/log/nginx/zachub.access.log;
+	
+	location ~ \.php$ {
+	   include snippets/fastcgi-php.conf;
+	   fastcgi_pass unix:/run/php/php7.1-fpm.sock;
+	}
+        
+        location /.well-known {
+           allow all;
+        }
+
+        ssl_certificate /etc/letsencrypt/live/zachub.duckdns.org/fullchain.pem;
+        ssl_certificate_key /etc/letsencrypt/live/zachub.duckdns.org/privkey.pem;
+
+        ssl_dhparam /etc/nginx/ssl/dhparam.pem;
+
+        listen 443;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubdomains";
+        ssl on;
+        ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+        ssl_ciphers "EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH:!aNULL:!eNULL:!EXPORT:!DES:!MD5:!PSK:!RC4";
+        ssl_prefer_server_ciphers on;
+        ssl_session_cache shared:SSL:10m;
+
+        proxy_buffering off;
+
+        location ^~ /plexstats {
+            proxy_pass http://192.168.1.180:8181;
+            proxy_set_header Host $host;
+            proxy_redirect http:// https://;
+            proxy_http_version 1.1;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+        }
+
+	location ^~ /sabnzbd {
+            proxy_pass http://192.168.1.180:9095;
+            proxy_set_header Host $host;
+            proxy_redirect http:// https://;
+            proxy_http_version 1.1;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Upgrade $http_upgrade;
+	    proxy_set_header Connection "upgrade";
+	}
+
+        location ^~ /radarr {
+            proxy_pass http://192.168.1.180:9104;
+            proxy_set_header Host $host;
+            proxy_redirect http:// https://;
+            proxy_http_version 1.1;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Upgrade $http_upgrade;
+	    proxy_set_header Connection "upgrade";
+	}
+
+	location /ombi {		
+	    return 301 $scheme://$host/ombi/;		
+	}
+
+	location /ombi/ {
+	    proxy_pass http://192.168.1.180:5000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Forwarded-Host $server_name;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Ssl on;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout  90;
+            proxy_redirect http://192.168.1.180:5000 https://$host;
+	}
+
+	if ($http_referer ~* /ombi/) {
+	    rewrite ^/dist/(.*) $scheme://$host/ombi/dist/$1 permanent;
+	}
+
+        location ^~ /sonarr {
+            proxy_pass http://192.168.1.180:9109;
+            proxy_set_header Host $host;
+            proxy_redirect http:// https://;
+            proxy_http_version 1.1;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Upgrade $http_upgrade;
+	    proxy_set_header Connection "upgrade";        
+	}
+
+        location ^~ /web {
+            proxy_pass http://192.168.1.180:32400;
+            proxy_set_header Host $host;
+            proxy_redirect http:// https://;
+            proxy_http_version 1.1;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+        }
+
+#	  location / {
+#            return 301 https://$server_name/transmission/;
+#	}
+      
+        location ^~ /transmission {
+            proxy_pass http://192.168.1.180:9091;
+            proxy_set_header Host $host;
+            proxy_redirect http:// https://;
+            proxy_http_version 1.1;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+        }
+}
